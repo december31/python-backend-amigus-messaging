@@ -1,15 +1,12 @@
-from django.http import JsonResponse
-from rest_framework import status
-from rest_framework.decorators import renderer_classes
-from rest_framework.renderers import JSONRenderer
-from rest_framework.response import Response
-from rest_framework.views import exception_handler
-from django.conf.urls import handler404
 import logging
-from base import status
 
-from base.response import BaseResponse
-from base.status import HttpStatus, internal_server_error, not_found
+from django.core.exceptions import PermissionDenied
+from django.http import Http404
+from rest_framework import exceptions
+from rest_framework.exceptions import APIException
+from rest_framework.views import exception_handler
+
+from base.response import BaseResponse, HttpStatus, internal_server_error, not_found
 
 logger = logging.getLogger(__name__)
 
@@ -23,18 +20,32 @@ def custom_exception_handler(exc, context):
     # Call DRF's built-in exception handler first
     response = exception_handler(exc, context)
 
+    if isinstance(exc, Http404):
+        exc = exceptions.NotFound(*exc.args)
+    elif isinstance(exc, PermissionDenied):
+        exc = exceptions.PermissionDenied(*exc.args)
+
+
+    if isinstance(exc, BaseApiException):
+        logger.error(f"Exception: {exc}", exc_info=True)
+        return BaseResponse.create(
+            http_status=exc.status,
+            data=None
+        )
     if response is not None:
+        logger.error(f"Exception: {exc}", exc_info=True)
         return BaseResponse.create(
             http_status=HttpStatus(
-                response.status_code,
-                response.status_code,
-                response.message
+                status_code=response.status_code,
+                code=response.status_code,
+                message=exc.detail,
             ),
             data=None
         )
+
     else:
         # Internal server error (uncaught by DRF)
-        logger.error(f"Unhandled exception: {exc}", exc_info=True)
+        logger.error(f"Exception: {exc}", exc_info=True)
 
         return BaseResponse.create(
             internal_server_error,
@@ -43,8 +54,20 @@ def custom_exception_handler(exc, context):
 
 
 def custom_404_view(request, exception=None):
+    logger.error(f"Unhandled exception: {exception}", exc_info=True)
     return BaseResponse.create(not_found)
 
 
 def custom_500_view(request, exception=None):
+    logger.error(f"Unhandled exception: {exception}", exc_info=True)
     return BaseResponse.create(internal_server_error)
+
+
+class BaseApiException(APIException):
+    status = internal_server_error
+
+    @staticmethod
+    def create(status):
+        exception = BaseApiException()
+        exception.status = status
+        return exception

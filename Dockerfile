@@ -34,18 +34,29 @@ RUN adduser \
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
 # into this layer.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y gcc default-libmysqlclient-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
+# Copy the source code into the container.
+COPY . /app
+
+# Set ownership of the /app directory to the new user
+# This is crucial for bind mounts where host permissions might conflict
+# If you're building the image for production, you might set permissions on /app for the non-root user.
+# For bind mounts, it's about giving the container user access to host files.
+# Chmod is also good to ensure execution rights on scripts etc.
+RUN chown -R appuser: /app
+RUN chmod -R ug+rwX /app # Give user and group read/write/execute permissions
+
 # Switch to the non-privileged user to run the application.
 USER appuser
 
-# Copy the source code into the container.
-COPY . .
 
 # Expose the port that the application listens on.
-EXPOSE 8888
-
-# Run the application.
-CMD gunicorn 'project.wsgi:application' --bind=0.0.0.0:8888
+EXPOSE 1102
