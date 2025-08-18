@@ -7,7 +7,6 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -51,3 +50,4 @@ manage.py
 
 # example database
 drf_example
+/env/production.env
