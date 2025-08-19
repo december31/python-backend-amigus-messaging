@@ -66,41 +66,32 @@ The BFD below provides a high-level overview of the backend's architecture and t
 ## Getting Started
 
 ### Prerequisites
-- Python 3.8+
-- Django
-- Django REST Framework (DRF)
-- A database (e.g., PostgreSQL, MySQL)
+- Docker Engine
 
 ### Installation
-1.  **Clone the repository:**
+1. **Clone the repository:**
     ```bash
-    git clone [repository_url]
-    cd amigus-messaging-backend
+    git clone [https://github.com/december31/python-backend-amigus-messaging.git]
+    cd python-backend-amigus-messaging
     ```
-2.  **Create a virtual environment:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
-3.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  **Configure environment variables:**
-    - Create a `.env` file in the project root.
+2. **Configure environment variables:**
+    - You can Create a `prodiction.env` file in the `/env` folder to run project using `compose-prod.yaml` or just use the default config in `env/development.env` and run `compose-dev.yaml`.
     - Add your database credentials, secret key, and other configurations.
     - Example:
       ```
-      SECRET_KEY=your_secret_key
-      DATABASE_URL=postgres://user:password@host:port/database_name
+      DATABASE_NAME=amigus_messaging
+      DATABASE_USER=postgres
+      DATABASE_PASSWORD=password
+      DATABASE_HOST=postgres
+      DATABASE_PORT=5432
       ```
-5.  **Run migrations:**
+3. **Start the development server:**
+    - for development:
     ```bash
-    python manage.py migrate
+    docker compose -f compose-dev.yaml up -d --build
     ```
-6.  **Start the development server:**
+   - for production
     ```bash
-    python manage.py runserver
+    docker compose -f compose-prod.yaml up -d --build
     ```
-
-The API will now be available at `http://127.0.0.1:8000/`.
+The API will now be available at `http://127.0.0.1:1103/`.
