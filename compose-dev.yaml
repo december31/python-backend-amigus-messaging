@@ -67,6 +67,7 @@ services:
   postgres:
     container_name: postgres
     image: postgres:latest
+    restart: always
     environment:
       POSTGRES_DB: amigus_messaging
       POSTGRES_USER: postgres
@@ -77,6 +78,9 @@ services:
       amigus-messaging-development:
     volumes:
       - db_data:/var/lib/postgresql/data
+
+  celery-worker:
+
 volumes:
   db_data:
   redis_data:

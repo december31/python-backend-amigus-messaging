@@ -127,8 +127,8 @@ CACHES = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'CamBOT',
-    'DESCRIPTION': 'Your project description',
+    'TITLE': 'Amigus Messaging',
+    'DESCRIPTION': 'Api documents for Amigus messaging system',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     # OTHER SETTINGS
