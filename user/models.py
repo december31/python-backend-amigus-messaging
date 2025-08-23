@@ -30,7 +30,7 @@ class CustomUserManager(UserManager):
             return None
 
     def create_superuser(
-        self, email = ..., password = ..., **extra_fields
+        self, email=..., password=..., **extra_fields
     ):
         super().create_superuser(username=email, email=email, password=password, **extra_fields)
 
@@ -51,5 +51,6 @@ class User(AbstractUser):
 class Token(BaseModel):
     access_token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
+    is_one_time_token = models.BooleanField(default=False)
     revoked = models.BooleanField(default=False)
     owner = ForeignKey(User, on_delete=models.CASCADE)

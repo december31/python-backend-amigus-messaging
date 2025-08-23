@@ -15,3 +15,12 @@ def get_object_or_exception(queryset, error_http_status: HttpStatus, *filter_arg
             raise e
 
     return model
+
+
+def get_object_or_none(queryset, *filter_args, **filter_kwargs):
+    try:
+        model = get_object_or_404(queryset, *filter_args, **filter_kwargs)
+    except Exception as e:
+        model = None
+
+    return model

@@ -12,7 +12,7 @@ services:
   server:
     build:
       context: .
-    restart: always
+    restart: unless-stopped
     command: >
       /bin/sh -c "python manage.py wait_for_db &&
         python manage.py makemigrations --noinput &&
@@ -78,8 +78,6 @@ services:
       amigus-messaging-development:
     volumes:
       - db_data:/var/lib/postgresql/data
-
-  celery-worker:
 
 volumes:
   db_data:

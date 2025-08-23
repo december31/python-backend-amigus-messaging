@@ -13,7 +13,8 @@ from base.response import (
     too_many_request,
     success,
     internal_server_error,
-    user_not_found, otp_is_not_correct, otp_has_expired, otp_has_not_been_requested,
+    user_not_found, otp_is_not_correct, otp_has_expired, otp_has_not_been_requested, email_already_registered, email_field_is_incorrect,
+    phone_field_is_incorrect, phone_already_registered,
 )
 from project import settings
 from user.models import User, Token
@@ -25,6 +26,7 @@ from user.serializers import (
     UserSerializer,
     SignInSerializer, UpdateUserInformationSerializer,
 )
+from utils.base_exception import BaseApiException
 from utils.model_utils import get_object_or_exception
 from utils.otp import (
     get_otp_requested_timestamp,
@@ -141,11 +143,13 @@ class VerifyOtpView(views.APIView):
         access_token, refresh_token = generate_token(user)
 
         token = Token.objects.create(
-            access_token=access_token, refresh_token=refresh_token, owner=user
+            access_token=access_token, refresh_token=refresh_token, owner=user, is_one_time_token=True
         )
 
         return BaseResponse.create(
-            http_status=success, data=TokenSerializer(token).data
+            http_status=success, data={
+                "one_time_token": token.access_token
+            }
         )
 
 
@@ -169,17 +173,17 @@ class SignUpView(views.APIView):
         if "@" in identifier:
             email = identifier
             if email and user.email and user.email != email:
-                raise AuthenticationFailed("Email field is inconsistent")
+                raise BaseApiException.create(email_field_is_incorrect)
             elif user.is_initialized:
-                raise serializers.ValidationError(f"User with email {email} has already been registered")
+                raise BaseApiException.create(email_already_registered)
             user.email = email
 
         else:
             phone = identifier
             if phone and user.phone and user.phone != phone:
-                raise AuthenticationFailed("Phone field is inconsistent")
+                raise BaseApiException.create(phone_field_is_incorrect)
             elif user.is_initialized:
-                raise serializers.ValidationError(f"User with phone {phone} has already been registered")
+                raise BaseApiException.create(phone_already_registered)
             user.phone = phone
 
         user.is_initialized = True
@@ -225,6 +229,10 @@ class SignInView(views.APIView):
         return BaseResponse.create(
             http_status=success, data=TokenSerializer(token).data
         )
+
+
+class ResetPassword(views.APIView):
+    pass
 
 
 class UserInformationView(views.APIView):

@@ -43,7 +43,7 @@ class VerifyOtpSerializer(serializers.Serializer):
 
 
 class SignUpSerializer(serializers.Serializer):
-    identifier = serializers.EmailField(max_length=255)
+    identifier = serializers.CharField(max_length=255)
     password = serializers.CharField(max_length=255, validators=[password_validator])
 
 class SignInSerializer(serializers.Serializer):

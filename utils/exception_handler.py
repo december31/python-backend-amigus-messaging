@@ -3,10 +3,11 @@ import logging
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from rest_framework import exceptions
-from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler
+from rest_framework_simplejwt.exceptions import InvalidToken
 
-from base.response import BaseResponse, HttpStatus, internal_server_error, not_found
+from base.response import BaseResponse, HttpStatus, internal_server_error, not_found, token_is_not_valid
+from utils.base_exception import BaseApiException
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,15 @@ def custom_exception_handler(exc, context):
             http_status=exc.status,
             data=None
         )
+
+    if isinstance(exc, InvalidToken):
+        logger.error(f"Exception: {exc}", exc_info=True)
+        w
+        return BaseResponse.create(
+            http_status=token_is_not_valid,
+            data=None
+        )
+
     if response is not None:
         logger.error(f"Exception: {exc}", exc_info=True)
         return BaseResponse.create(
@@ -61,13 +71,3 @@ def custom_404_view(request, exception=None):
 def custom_500_view(request, exception=None):
     logger.error(f"Unhandled exception: {exception}", exc_info=True)
     return BaseResponse.create(internal_server_error)
-
-
-class BaseApiException(APIException):
-    status = internal_server_error
-
-    @staticmethod
-    def create(status):
-        exception = BaseApiException()
-        exception.status = status
-        return exception

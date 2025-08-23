@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "rest_framework_simplejwt",
+    "rest_framework",
     "drf_spectacular",
     "user",
     "base",
@@ -107,7 +108,7 @@ SIMPLE_JWT = {
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'utils.exception_handler.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'user.authentication.Authentication',
     ),
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -131,7 +132,11 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Api documents for Amigus messaging system',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+
     # OTHER SETTINGS
+    'EXTENSIONS': [
+        'user.authentication.AuthenticationExtension',  # Path to your extension class
+    ],
 }
 
 ROOT_URLCONF = 'project.urls'
@@ -153,8 +158,6 @@ TEMPLATES = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'yourapp.backends.MultiFieldAuthenticationBackend',  # Our custom email/phone backend
-    'yourapp.backends.OAuthAuthenticationBackend',  # Our custom OAuth backend (if using)
     'django.contrib.auth.backends.ModelBackend',  # Default ModelBackend (important if you still use username or other simple lookups)
 ]
 
