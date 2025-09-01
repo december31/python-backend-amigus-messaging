@@ -34,6 +34,9 @@ urlpatterns = [
     # user
     path("", include("user.urls"), name="user"),
 
+    # message
+    path("", include("message.urls"), name="message"),
+
     # open api
     path('', RedirectView.as_view(url=reverse_lazy('swagger-ui'))),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -6,7 +6,7 @@ from rest_framework.request import Request
 from rest_framework_simplejwt.authentication import JWTAuthentication, AuthUser
 from rest_framework_simplejwt.tokens import Token
 
-from base.response import token_is_not_valid
+from base.response import invalid_token, token_expired
 from user import models
 from utils.base_exception import BaseApiException
 
@@ -33,11 +33,15 @@ class Authentication(JWTAuthentication):
 
         saved_token = models.Token.objects.get(access_token=raw_token.decode("utf-8"))
 
-        if saved_token is None or saved_token.revoked:
-            raise BaseApiException.create(token_is_not_valid)
+        if saved_token is None:
+            raise BaseApiException.create(invalid_token)
+
+        if saved_token.revoked:
+            raise BaseApiException.create(token_expired)
 
         if saved_token.is_one_time_token:
             saved_token.revoked = True
+            saved_token.save()
 
         return token
 

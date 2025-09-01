@@ -1,12 +1,14 @@
-from django.urls import path
+from django.urls import re_path
 
-from user.views import RequestOtpView, SignUpView, VerifyOtpView, UserInformationView, SignInView
+from user.views import RequestOtpView, SignUpView, VerifyOtpView, UserInformationView, SignInAccountView, ChangePasswordView
 
 urlpatterns = [
-    path("api/v1/auth/otp/request/", RequestOtpView.as_view(), name='request-otp'),
-    path("api/v1/auth/otp/verify/", VerifyOtpView.as_view(), name='verify_otp'),
-    path("api/v1/auth/signup/", SignUpView.as_view(), name='signup'),
-    path("api/v1/auth/signin/", SignInView.as_view(), name='signin'),
+    re_path(r"^api/v1/auth/otp/request/?$", RequestOtpView.as_view(), name='request-otp'),
+    re_path(r"^api/v1/auth/otp/verify/?$", VerifyOtpView.as_view(), name='verify_otp'),
+    re_path(r"^api/v1/auth/sign-up/?$", SignUpView.as_view(), name='signup'),
+    re_path(r"^api/v1/auth/sign-in/account/?$", SignInAccountView.as_view(), name='signin'),
+    re_path(r"^api/v1/auth/change-password/?$", ChangePasswordView.as_view(), name='change_password'),
 
-    path("api/v1/user/", UserInformationView.as_view(), name="user_information")
+    re_path(r"^api/v1/user/?$", UserInformationView.as_view(), name="user_information")
 ]
+

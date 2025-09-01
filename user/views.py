@@ -14,7 +14,7 @@ from base.response import (
     success,
     internal_server_error,
     user_not_found, otp_is_not_correct, otp_has_expired, otp_has_not_been_requested, email_already_registered, email_field_is_incorrect,
-    phone_field_is_incorrect, phone_already_registered,
+    phone_field_is_incorrect, phone_already_registered, password_is_incorrect, account_does_not_existed,
 )
 from project import settings
 from user.models import User, Token
@@ -24,7 +24,7 @@ from user.serializers import (
     VerifyOtpSerializer,
     TokenSerializer,
     UserSerializer,
-    SignInSerializer, UpdateUserInformationSerializer,
+    SignInSerializer, UpdateUserInformationSerializer, ChangePasswordSerializer,
 )
 from utils.base_exception import BaseApiException
 from utils.model_utils import get_object_or_exception
@@ -193,32 +193,29 @@ class SignUpView(views.APIView):
         return BaseResponse.create(http_status=success, data=UserSerializer(user).data)
 
 
-class SignInView(views.APIView):
+class SignInAccountView(views.APIView):
     serializer_class = SignInSerializer
     permission_classes = (AllowAny,)
     authentication_classes = []
 
     @extend_schema(tags=["Auth"])
-    def post(self, request, *args, **kwargs):
-        # serializer = SignInSerializer(data=request.data)
-        # serializer.is_valid(raise_exception=True)
+    def post(self, request):
+        serializer = SignInSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        identifier = request.data.get("identifier")
-        password = request.data.get("password")
-
-        if identifier is None:
-            raise AuthenticationFailed("Identifier field must be provided")
-
-        if password is None:
-            raise AuthenticationFailed("Password field must be provided")
+        identifier = serializer.validated_data.get("identifier")
+        password = serializer.validated_data.get("password")
 
         if "@" in identifier:
             user = User.objects.get_by_email_or_null(email=identifier)
         else:
             user = User.objects.get_by_phone_or_null(phone=identifier)
 
-        if user is None or not user.check_password(password):
-            raise AuthenticationFailed("Authentication failed")
+        if user is None:
+            raise BaseApiException.create(account_does_not_existed)
+
+        if not user.check_password(password):
+            raise BaseApiException.create(password_is_incorrect)
 
         access_token, refresh_token = generate_token(user)
 
@@ -231,8 +228,29 @@ class SignInView(views.APIView):
         )
 
 
-class ResetPassword(views.APIView):
-    pass
+class ChangePasswordView(views.APIView):
+    serializer_class = ChangePasswordSerializer
+
+    @extend_schema(tags=["Auth"])
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        identifier = serializer.validated_data.get("identifier")
+        password = serializer.validated_data.get("password")
+
+        if "@" in identifier:
+            user = User.objects.get_by_email_or_null(email=identifier)
+        else:
+            user = User.objects.get_by_phone_or_null(phone=identifier)
+
+        if user is None:
+            raise BaseApiException.create(account_does_not_existed)
+
+        user.set_password(password)
+        user.save()
+
+        return BaseResponse.create(http_status=success, data=UserSerializer(user).data)
 
 
 class UserInformationView(views.APIView):

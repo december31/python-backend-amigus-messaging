@@ -13,7 +13,6 @@ from base.models import BaseModel
 
 logger = logging.getLogger(__name__)
 
-
 class CustomUserManager(UserManager):
     def get_by_email_or_null(self, email):
         try:
@@ -33,6 +32,7 @@ class CustomUserManager(UserManager):
         self, email=..., password=..., **extra_fields
     ):
         super().create_superuser(username=email, email=email, password=password, **extra_fields)
+
 
 
 class User(AbstractUser):

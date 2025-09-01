@@ -2,11 +2,11 @@ import logging
 
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
-from rest_framework import exceptions
+from rest_framework import exceptions, serializers
 from rest_framework.views import exception_handler
 from rest_framework_simplejwt.exceptions import InvalidToken
 
-from base.response import BaseResponse, HttpStatus, internal_server_error, not_found, token_is_not_valid
+from base.response import BaseResponse, HttpStatus, internal_server_error, not_found, invalid_token, bad_request
 from utils.base_exception import BaseApiException
 
 logger = logging.getLogger(__name__)
@@ -26,20 +26,44 @@ def custom_exception_handler(exc, context):
     elif isinstance(exc, PermissionDenied):
         exc = exceptions.PermissionDenied(*exc.args)
 
-
     if isinstance(exc, BaseApiException):
         logger.error(f"Exception: {exc}", exc_info=True)
         return BaseResponse.create(
             http_status=exc.status,
+            message=exc.message,
             data=None
         )
 
     if isinstance(exc, InvalidToken):
         logger.error(f"Exception: {exc}", exc_info=True)
-        w
         return BaseResponse.create(
-            http_status=token_is_not_valid,
+            http_status=invalid_token,
             data=None
+        )
+
+    if isinstance(exc, serializers.ValidationError):
+        errors = exc.detail
+        error_messages = []
+
+        if isinstance(errors, dict):
+            for field, err_list in errors.items():
+                if isinstance(err_list, list):
+                    for err_msg in err_list:
+                        error_messages.append(f"{field}: {err_msg}")
+                else:
+                    # For non-list errors
+                    error_messages.append(f"{field}: {err_list}")
+        else:
+            # Handle non-dictionary errors (e.g., list of strings)
+            error_messages = [str(err) for err in errors]
+
+        if len(errors) == 0:
+            error_messages.append("Bad request")
+
+        return BaseResponse.create(
+            http_status=bad_request,
+            message=error_messages[0],
+            data=None,
         )
 
     if response is not None:

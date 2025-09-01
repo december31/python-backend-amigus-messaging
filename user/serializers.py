@@ -1,7 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import MinLengthValidator, MaxLengthValidator
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from user.models import Token
 
@@ -15,10 +13,12 @@ class TokenSerializer(serializers.ModelSerializer):
         model = Token
         fields = ("access_token", "refresh_token")
 
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "email", "phone", "avatar")
+
 
 class OTPRequestSerializer(serializers.Serializer):
     identifier = serializers.CharField(
@@ -43,13 +43,33 @@ class VerifyOtpSerializer(serializers.Serializer):
 
 
 class SignUpSerializer(serializers.Serializer):
-    identifier = serializers.CharField(max_length=255)
+    identifier = serializers.CharField(
+        max_length=255,
+        help_text="User's phone number (e.g., +84912345678) or email address (e.g., user@example.com)",
+        validators=[identifier_validator]
+    )
     password = serializers.CharField(max_length=255, validators=[password_validator])
+
 
 class SignInSerializer(serializers.Serializer):
-    identifier = serializers.CharField(max_length=255)
+    identifier = serializers.CharField(
+        max_length=255,
+        help_text="User's phone number (e.g., +84912345678) or email address (e.g., user@example.com)",
+        validators=[identifier_validator]
+    )
     password = serializers.CharField(max_length=255, validators=[password_validator])
 
+
 class UpdateUserInformationSerializer(serializers.Serializer):
-    email = serializers.EmailField(max_length=255)
-    phone = serializers.CharField(max_length=100)
+    email = serializers.EmailField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    phone = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
+    display_name = serializers.CharField(max_length=255, required=False, allow_null=False, allow_blank=False)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    identifier = serializers.CharField(
+        max_length=255,
+        help_text="User's phone number (e.g., +84912345678) or email address (e.g., user@example.com)",
+        validators=[identifier_validator]
+    )
+    password = serializers.CharField(max_length=255, validators=[password_validator])
