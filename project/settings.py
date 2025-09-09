@@ -115,6 +115,8 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 0
 }
 
 CACHES = {
@@ -175,6 +177,31 @@ DATABASES = {
         'PASSWORD': os.environ.get("DATABASE_PASSWORD"),
         'HOST': os.environ.get("DATABASE_HOST"),  # or your DB host
         'PORT': os.environ.get("DATABASE_PORT"),  # default PostgreSQL port
+    }
+}
+
+# settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'filters': ['require_debug_true'], # Optional: only log when DEBUG is True
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False, # Prevent queries from being logged by parent loggers
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        }
     }
 }
 

@@ -30,7 +30,14 @@ class ConversationParticipant(BaseModel):
         blank=False,
         related_name="participants",
     )
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="conversation_member",
+    )
+
     role = models.ForeignKey(ConversationRole, on_delete=models.SET_NULL, null=True)
     accepted = models.BooleanField(default=False)
 

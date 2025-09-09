@@ -1,21 +1,21 @@
-from django.db.models import Count
+from django.db.models import Count, Max, OuterRef, Subquery
 from drf_spectacular.utils import extend_schema
 from rest_framework import views
 from rest_framework.permissions import IsAuthenticated
 
-from base.response import BaseResponse, success
+from base.response import BaseResponse, success, BaseListResponse
 from message.models import Message, Conversation, ConversationParticipant, ConversationRole
-from message.serializers import SendMessageSerializer, MessageSerializer
+from message.serializers import SendPrivateMessageSerializer, MessageSerializer, SendGroupMessageSerializer
 from user.models import User
 
 
 class SendPrivateMessageView(views.APIView):
-    serializer_class = SendMessageSerializer
+    serializer_class = SendPrivateMessageSerializer
     permission_classes = (IsAuthenticated,)
 
     @extend_schema(tags=["Message"])
     def post(self, request):
-        serializer = SendMessageSerializer(data=request.data)
+        serializer = SendPrivateMessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         receiver_id = serializer.validated_data.get('receiver_id')
@@ -24,7 +24,7 @@ class SendPrivateMessageView(views.APIView):
         receiver = User.objects.get(id=receiver_id)
 
         conversation = Conversation.objects.filter(
-            participants_user_id__in=[receiver_id, request.user.id]
+            participants__user__id__in=[receiver_id, request.user.id]
         ).annotate(
             participant_count=Count("participants")
         ).filter(
@@ -36,11 +36,10 @@ class SendPrivateMessageView(views.APIView):
         print(conversation)
 
         if conversation is None:
-
             role = ConversationRole.objects.get(name=ConversationRole.NameChoice.ADMIN.value)
 
             conversation = Conversation.objects.create(
-                type = Conversation.TypeChoice.PRIVATE
+                type=Conversation.TypeChoice.PRIVATE
             )
 
             ConversationParticipant.objects.bulk_create(
@@ -61,7 +60,6 @@ class SendPrivateMessageView(views.APIView):
                 ]
             )
 
-
         message = Message.objects.create(
             conversation=conversation,
             sender=request.user,
@@ -69,3 +67,25 @@ class SendPrivateMessageView(views.APIView):
         )
 
         return BaseResponse.create(success, data=MessageSerializer(message).data)
+
+
+class SendGroupMessageView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SendGroupMessageSerializer
+
+    @extend_schema(tags=["Message"])
+    def post(self, request):
+        pass
+
+
+class RecentConversation(views.APIView):
+    def get(self, request):
+        latest_message_sub_query = Message.objects.filter(
+            conversation=OuterRef("conversation")
+        )
+
+        latest_message_by_conversation = Message.objects.filter(
+            id__in=Subquery
+        )
+
+        return BaseListResponse.create(success, data={})
