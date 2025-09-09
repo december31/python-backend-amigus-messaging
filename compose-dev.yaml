@@ -12,11 +12,12 @@ services:
   server:
     build:
       context: .
-    restart: always
+    restart: unless-stopped
     command: >
       /bin/sh -c "python manage.py wait_for_db &&
         python manage.py makemigrations --noinput &&
         python manage.py migrate --noinput &&
+        python manage.py init_conversation_role &&
         python manage.py runserver 0.0.0.0:1102"
     container_name: server
     ports:
@@ -78,8 +79,6 @@ services:
       amigus-messaging-development:
     volumes:
       - db_data:/var/lib/postgresql/data
-
-  celery-worker:
 
 volumes:
   db_data:

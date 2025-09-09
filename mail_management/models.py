@@ -13,6 +13,9 @@ class MailLog(BaseModel):
         FAILURE = "FAILURE", "failure"
         SENDING = "SENDING", "sending"
 
-    content = models.CharField()
+    subject = models.CharField(max_length=255)
+    content = models.TextField()
     status = models.CharField(choices=StatusChoice.choices, max_length=10)
-    receiver = models.ForeignKey(User, on_delete=models.SET_NULL)
+    error_message = models.TextField(null=True)
+    sent_at = models.DateTimeField(null=True)
+    receiver = models.EmailField()

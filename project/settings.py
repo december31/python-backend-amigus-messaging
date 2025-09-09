@@ -37,8 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "rest_framework_simplejwt",
+    "rest_framework",
     "drf_spectacular",
     "user",
+    "message",
     "base",
     "django_extensions",
 ]
@@ -107,12 +109,14 @@ SIMPLE_JWT = {
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'utils.exception_handler.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'user.authentication.Authentication',
     ),
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 0
 }
 
 CACHES = {
@@ -131,7 +135,11 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Api documents for Amigus messaging system',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+
     # OTHER SETTINGS
+    'EXTENSIONS': [
+        'user.authentication.AuthenticationExtension',  # Path to your extension class
+    ],
 }
 
 ROOT_URLCONF = 'project.urls'
@@ -153,8 +161,6 @@ TEMPLATES = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'yourapp.backends.MultiFieldAuthenticationBackend',  # Our custom email/phone backend
-    'yourapp.backends.OAuthAuthenticationBackend',  # Our custom OAuth backend (if using)
     'django.contrib.auth.backends.ModelBackend',  # Default ModelBackend (important if you still use username or other simple lookups)
 ]
 
@@ -171,6 +177,31 @@ DATABASES = {
         'PASSWORD': os.environ.get("DATABASE_PASSWORD"),
         'HOST': os.environ.get("DATABASE_HOST"),  # or your DB host
         'PORT': os.environ.get("DATABASE_PORT"),  # default PostgreSQL port
+    }
+}
+
+# settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'filters': ['require_debug_true'], # Optional: only log when DEBUG is True
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False, # Prevent queries from being logged by parent loggers
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        }
     }
 }
 

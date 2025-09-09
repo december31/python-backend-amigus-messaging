@@ -3,18 +3,24 @@ import random
 import time
 
 from django.core.mail import send_mail
+from django.db.models import Subquery
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import views, serializers
+from kombu.pools import get_limit
+from rest_framework import views, serializers, viewsets
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.viewsets import ModelViewSet
 
 from base.response import (
     BaseResponse,
     too_many_request,
     success,
     internal_server_error,
-    user_not_found, otp_is_not_correct, otp_has_expired, otp_has_not_been_requested,
+    user_not_found, otp_is_not_correct, otp_has_expired, otp_has_not_been_requested, email_already_registered, email_field_is_incorrect,
+    phone_field_is_incorrect, phone_already_registered, password_is_incorrect, account_does_not_existed, BaseListResponse,
 )
+from message.models import Conversation, ConversationParticipant
 from project import settings
 from user.models import User, Token
 from user.serializers import (
@@ -23,8 +29,9 @@ from user.serializers import (
     VerifyOtpSerializer,
     TokenSerializer,
     UserSerializer,
-    SignInSerializer, UpdateUserInformationSerializer,
+    SignInSerializer, UpdateUserInformationSerializer, ChangePasswordSerializer,
 )
+from utils.base_exception import BaseApiException
 from utils.model_utils import get_object_or_exception
 from utils.otp import (
     get_otp_requested_timestamp,
@@ -141,11 +148,13 @@ class VerifyOtpView(views.APIView):
         access_token, refresh_token = generate_token(user)
 
         token = Token.objects.create(
-            access_token=access_token, refresh_token=refresh_token, owner=user
+            access_token=access_token, refresh_token=refresh_token, owner=user, is_one_time_token=True
         )
 
         return BaseResponse.create(
-            http_status=success, data=TokenSerializer(token).data
+            http_status=success, data={
+                "one_time_token": token.access_token
+            }
         )
 
 
@@ -169,17 +178,17 @@ class SignUpView(views.APIView):
         if "@" in identifier:
             email = identifier
             if email and user.email and user.email != email:
-                raise AuthenticationFailed("Email field is inconsistent")
+                raise BaseApiException.create(email_field_is_incorrect)
             elif user.is_initialized:
-                raise serializers.ValidationError(f"User with email {email} has already been registered")
+                raise BaseApiException.create(email_already_registered)
             user.email = email
 
         else:
             phone = identifier
             if phone and user.phone and user.phone != phone:
-                raise AuthenticationFailed("Phone field is inconsistent")
+                raise BaseApiException.create(phone_field_is_incorrect)
             elif user.is_initialized:
-                raise serializers.ValidationError(f"User with phone {phone} has already been registered")
+                raise BaseApiException.create(phone_already_registered)
             user.phone = phone
 
         user.is_initialized = True
@@ -189,32 +198,29 @@ class SignUpView(views.APIView):
         return BaseResponse.create(http_status=success, data=UserSerializer(user).data)
 
 
-class SignInView(views.APIView):
+class SignInAccountView(views.APIView):
     serializer_class = SignInSerializer
     permission_classes = (AllowAny,)
     authentication_classes = []
 
     @extend_schema(tags=["Auth"])
-    def post(self, request, *args, **kwargs):
-        # serializer = SignInSerializer(data=request.data)
-        # serializer.is_valid(raise_exception=True)
+    def post(self, request):
+        serializer = SignInSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        identifier = request.data.get("identifier")
-        password = request.data.get("password")
-
-        if identifier is None:
-            raise AuthenticationFailed("Identifier field must be provided")
-
-        if password is None:
-            raise AuthenticationFailed("Password field must be provided")
+        identifier = serializer.validated_data.get("identifier")
+        password = serializer.validated_data.get("password")
 
         if "@" in identifier:
             user = User.objects.get_by_email_or_null(email=identifier)
         else:
             user = User.objects.get_by_phone_or_null(phone=identifier)
 
-        if user is None or not user.check_password(password):
-            raise AuthenticationFailed("Authentication failed")
+        if user is None:
+            raise BaseApiException.create(account_does_not_existed)
+
+        if not user.check_password(password):
+            raise BaseApiException.create(password_is_incorrect)
 
         access_token, refresh_token = generate_token(user)
 
@@ -227,7 +233,32 @@ class SignInView(views.APIView):
         )
 
 
-class UserInformationView(views.APIView):
+class ChangePasswordView(views.APIView):
+    serializer_class = ChangePasswordSerializer
+
+    @extend_schema(tags=["Auth"])
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        identifier = serializer.validated_data.get("identifier")
+        password = serializer.validated_data.get("password")
+
+        if "@" in identifier:
+            user = User.objects.get_by_email_or_null(email=identifier)
+        else:
+            user = User.objects.get_by_phone_or_null(phone=identifier)
+
+        if user is None:
+            raise BaseApiException.create(account_does_not_existed)
+
+        user.set_password(password)
+        user.save()
+
+        return BaseResponse.create(http_status=success, data=UserSerializer(user).data)
+
+
+class PersonalInformationView(views.APIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
@@ -239,20 +270,9 @@ class UserInformationView(views.APIView):
         else:
             return UserSerializer
 
-    @extend_schema(tags=["User"], parameters=[OpenApiParameter(name="id", type=int, required=False, description="User ID")])
+    @extend_schema(tags=["User"])
     def get(self, request):
-        user_id = request.query_params.get("id")
-        if user_id:
-            user = get_object_or_exception(
-                queryset=User.objects, error_http_status=user_not_found, id=user_id
-            )
-            return BaseResponse.create(
-                http_status=success, data=UserSerializer(user).data
-            )
-        else:
-            return BaseResponse.create(
-                http_status=success, data=UserSerializer(request.user).data
-            )
+        return BaseResponse.create(http_status=success, data=UserSerializer(request.user).data)
 
     @extend_schema(tags=["User"])
     def put(self, request, *args, **kwargs):
@@ -263,6 +283,7 @@ class UserInformationView(views.APIView):
 
         user.email = serializer.validated_data["email"]
         user.phone = serializer.validated_data["phone"]
+        user.display_name = serializer.validated_data["display_name"]
         user.save()
 
         return BaseResponse.create(http_status=success, data=serializer.data)
@@ -286,3 +307,60 @@ class UserInformationView(views.APIView):
         user.save()
 
         return BaseResponse.create(http_status=success, data=serializer.data)
+
+
+class UserInformationView(views.APIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["User"],
+        parameters=[
+            OpenApiParameter(name="id", type=int, required=False, description="User ID"),
+            OpenApiParameter(name="email", type=str, required=False, description="User Email"),
+            OpenApiParameter(name="phone", type=str, required=False, description="User Phone")
+        ]
+    )
+    def get(self, request):
+        user_id = request.query_params.get("id")
+        user_email = request.query_params.get("email")
+        user_phone = request.query_params.get("phone")
+        if user_id:
+            user = get_object_or_exception(User.objects, user_not_found, id=user_id)
+        elif user_email:
+            user = get_object_or_exception(User.objects, user_not_found, email=user_email)
+        elif user_phone:
+            user = get_object_or_exception(User.objects, user_not_found, phone=user_phone)
+        else:
+            raise BaseApiException.create(user_not_found)
+
+        return BaseListResponse.create(http_status=success, data=UserSerializer(user).data)
+
+
+class ContactsView(views.APIView, LimitOffsetPagination):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Contacts"],
+        parameters=[
+            OpenApiParameter(name="limit", type=int, description="Number of contacts to return"),
+            OpenApiParameter(name="offset", type=int, description="Number of contacts to ignored")
+        ])
+    def get(self, request):
+        if self.get_limit(request) <= 0:
+            return BaseListResponse.create(success, data=[])
+        if self.get_offset(request) <= 0:
+            return BaseListResponse.create(success, data=[])
+
+        conversation_participants = User.objects.filter(
+            id__in=ConversationParticipant.objects.filter(
+                conversation__id__in=Conversation.objects.filter(
+                    participants__user__id__in=[request.user.id],
+                    type=Conversation.TypeChoice.PRIVATE.value
+                ).values("id")
+            ).exclude(user__id=request.user.id).values_list("user")
+        ).order_by("display_name", "email", "phone")
+
+        result = self.paginate_queryset(conversation_participants, request, view=self)
+
+        return BaseListResponse.create(success, data=UserSerializer(result, many=True).data)

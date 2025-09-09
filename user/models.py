@@ -30,7 +30,7 @@ class CustomUserManager(UserManager):
             return None
 
     def create_superuser(
-        self, email = ..., password = ..., **extra_fields
+        self, email=..., password=..., **extra_fields
     ):
         super().create_superuser(username=email, email=email, password=password, **extra_fields)
 
@@ -40,6 +40,7 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
     email = models.EmailField(max_length=255, unique=True, null=True, blank=False)
     phone = models.CharField(max_length=20, unique=True, null=True, blank=False)
+    display_name = models.CharField(max_length=255, null=True, blank=True, default=None)
 
     avatar = models.CharField(max_length=255, null=True, blank=True)
 
@@ -51,5 +52,6 @@ class User(AbstractUser):
 class Token(BaseModel):
     access_token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
+    is_one_time_token = models.BooleanField(default=False)
     revoked = models.BooleanField(default=False)
     owner = ForeignKey(User, on_delete=models.CASCADE)
