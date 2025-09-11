@@ -349,7 +349,7 @@ class ContactsView(views.APIView, LimitOffsetPagination):
     def get(self, request):
         if self.get_limit(request) <= 0:
             return BaseListResponse.create(success, data=[])
-        if self.get_offset(request) <= 0:
+        if self.get_offset(request) < 0:
             return BaseListResponse.create(success, data=[])
 
         conversation_participants = User.objects.filter(

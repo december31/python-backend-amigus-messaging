@@ -1,12 +1,18 @@
-from django.db.models import Count, Max, OuterRef, Subquery
-from drf_spectacular.utils import extend_schema
+import json
+import logging
+
+from django.db.models import Count, Max, OuterRef, Subquery, Q
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import views
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 
 from base.response import BaseResponse, success, BaseListResponse
 from message.models import Message, Conversation, ConversationParticipant, ConversationRole
 from message.serializers import SendPrivateMessageSerializer, MessageSerializer, SendGroupMessageSerializer
 from user.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class SendPrivateMessageView(views.APIView):
@@ -78,14 +84,39 @@ class SendGroupMessageView(views.APIView):
         pass
 
 
-class RecentConversation(views.APIView):
+class RecentMessagesView(views.APIView, LimitOffsetPagination):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Message"],
+        parameters=[
+            OpenApiParameter(name="limit", type=int),
+            OpenApiParameter(name="offset", type=int)
+        ])
     def get(self, request):
-        latest_message_sub_query = Message.objects.filter(
+        if self.get_limit(request) <= 0:
+            return BaseListResponse.create(success, data=[])
+        if self.get_offset(request) < 0:
+            return BaseListResponse.create(success, data=[])
+
+        latest_message_subquery = Message.objects.filter(
             conversation=OuterRef("conversation")
-        )
+        ).order_by("-created_at", "-id")
 
-        latest_message_by_conversation = Message.objects.filter(
-            id__in=Subquery
-        )
+        unread_message_subquery = Message.objects.filter(
+            conversation=OuterRef("conversation")
+        ).values("conversation").annotate(unread=Count(
+            "id",
+            filter=Q(status=Message.StatusChoice.SENT.value) & ~Q(sender__id=request.user.id)
+        )).values("unread")[:1]
 
-        return BaseListResponse.create(success, data={})
+
+        latest_message = Message.objects.filter(
+            id=Subquery(latest_message_subquery[:1].values("id")),
+            conversation__participants__user__id=request.user.id
+        ).order_by("-created_at").annotate(unread=Subquery(unread_message_subquery))
+
+        print(latest_message.values())
+        result = self.paginate_queryset(latest_message, request, view=self)
+
+        return BaseListResponse.create(success, data=MessageSerializer(result, many=True).data)

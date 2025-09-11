@@ -10,6 +10,7 @@ class Conversation(BaseModel):
         GROUP = "group", "Group"
 
     type = models.CharField(choices=TypeChoice.choices)
+    name = models.CharField(null=True)
 
 
 class ConversationRole(BaseModel):
@@ -43,6 +44,11 @@ class ConversationParticipant(BaseModel):
 
 
 class Message(BaseModel):
+    class StatusChoice(models.TextChoices):
+        SENT = "sent", "Sent"
+        RECEIVED = "received", "Received"
+        SEEN = "seen", "Seen"
+
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,
@@ -52,6 +58,7 @@ class Message(BaseModel):
     )
     sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     content = models.TextField()
+    status = models.CharField(max_length=20, choices=StatusChoice.choices, default=StatusChoice.SENT.value)
 
     @property
     def attachments(self):
