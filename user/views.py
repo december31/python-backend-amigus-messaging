@@ -172,16 +172,13 @@ class SignUpView(views.APIView):
 
         user = request.user
 
-        print(identifier)
-        print(user.email)
-
         if "@" in identifier:
             email = identifier
-            if email and user.email and user.email != email:
+            if email and user.emails and user.emails != email:
                 raise BaseApiException.create(email_field_is_incorrect)
             elif user.is_initialized:
                 raise BaseApiException.create(email_already_registered)
-            user.email = email
+            user.emails = email
 
         else:
             phone = identifier
@@ -281,7 +278,7 @@ class PersonalInformationView(views.APIView):
         serializer = UserSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        user.email = serializer.validated_data["email"]
+        user.emails = serializer.validated_data["email"]
         user.phone = serializer.validated_data["phone"]
         user.display_name = serializer.validated_data["display_name"]
         user.save()
@@ -299,7 +296,7 @@ class PersonalInformationView(views.APIView):
         phone = serializer.validated_data.get("phone")
 
         if email:
-            user.email = serializer.validated_data["email"]
+            user.emails = serializer.validated_data["email"]
 
         if phone:
             user.phone = serializer.validated_data["phone"]
