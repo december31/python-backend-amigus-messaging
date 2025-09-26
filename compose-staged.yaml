@@ -1,0 +1,90 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker Compose reference guide at
+# https://docs.docker.com/go/compose-spec-reference/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+name: amigus-messaging-development
+services:
+  server:
+    build:
+      context: .
+    restart: unless-stopped
+    command: >
+      /bin/sh -c "python manage.py wait_for_db &&
+        python manage.py makemigrations --noinput &&
+        python manage.py migrate --noinput &&
+        python manage.py init_conversation_role &&
+        python manage.py runserver 0.0.0.0:1102"
+    container_name: server
+    ports:
+      - "1103:1102"
+    volumes:
+      - ./:/app
+    env_file:
+      - ./env/staged.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      amigus-messaging-development:
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    networks:
+      amigus-messaging-development:
+    ports:
+      - "6376:6379"
+    volumes:
+      - redis_data:/var/lib/redis/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    restart: unless-stopped
+    volumes:
+      - mailpit_data:/var/lib/mailpit/data
+    ports:
+      - "8024:8025"
+      - "1024:1025"
+    networks:
+      amigus-messaging-development:
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: amigus_messaging
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    networks:
+      amigus-messaging-development:
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
+  redis_data:
+  mailpit_data:
+
+networks:
+  amigus-messaging-development:
+

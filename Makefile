@@ -12,6 +12,9 @@ build: ## Build all Docker images
 up: ## Start the services in detached mode
 	$(DOCKER_COMPOSE) -f compose-dev.yaml up -d --build
 
+up-staged: ## Start the services in detached mode
+	$(DOCKER_COMPOSE) -f compose-staged.yaml up -d --build
+
 up-prod: ## Start the services in detached mode
 	$(DOCKER_COMPOSE) -f compose-prod.yaml up -d --build
 

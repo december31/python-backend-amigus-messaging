@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework",
     "drf_spectacular",
+    "firebase",
     "user",
     "message",
     "base",
@@ -65,6 +66,8 @@ EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL") == "True"  # Set to True if your
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", default="")  # Your email address for authentication
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", default="")  # Your email password or app-specific password if 2FA is enabled
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", default="support@cambot.com")  # Default sender email address
+
+FIREBASE_CREDENTIALS = os.environ.get("FIREBASE_CREDENTIALS", "")
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get("ACCESS_TOKEN_VALID_TIME", 60))),
@@ -188,14 +191,14 @@ LOGGING = {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'filters': ['require_debug_true'], # Optional: only log when DEBUG is True
+            'filters': ['require_debug_true'],  # Optional: only log when DEBUG is True
         },
     },
     'loggers': {
         'django.db.backends': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': False, # Prevent queries from being logged by parent loggers
+            'propagate': False,  # Prevent queries from being logged by parent loggers
         },
     },
     'filters': {

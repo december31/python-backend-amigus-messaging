@@ -39,6 +39,7 @@ from utils.otp import (
     set_otp_requested_timestamp,
     get_otp,
 )
+from utils.pagination import PageBasedPagination
 from utils.tokens import generate_token
 
 logger = logging.getLogger(__name__)
@@ -174,11 +175,11 @@ class SignUpView(views.APIView):
 
         if "@" in identifier:
             email = identifier
-            if email and user.emails and user.emails != email:
+            if email and user.email and user.email != email:
                 raise BaseApiException.create(email_field_is_incorrect)
             elif user.is_initialized:
                 raise BaseApiException.create(email_already_registered)
-            user.emails = email
+            user.email = email
 
         else:
             phone = identifier
@@ -213,7 +214,7 @@ class SignInAccountView(views.APIView):
         else:
             user = User.objects.get_by_phone_or_null(phone=identifier)
 
-        if user is None:
+        if user is None or not user.is_initialized:
             raise BaseApiException.create(account_does_not_existed)
 
         if not user.check_password(password):
@@ -278,7 +279,7 @@ class PersonalInformationView(views.APIView):
         serializer = UserSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        user.emails = serializer.validated_data["email"]
+        user.email = serializer.validated_data["email"]
         user.phone = serializer.validated_data["phone"]
         user.display_name = serializer.validated_data["display_name"]
         user.save()
@@ -296,7 +297,7 @@ class PersonalInformationView(views.APIView):
         phone = serializer.validated_data.get("phone")
 
         if email:
-            user.emails = serializer.validated_data["email"]
+            user.email = serializer.validated_data["email"]
 
         if phone:
             user.phone = serializer.validated_data["phone"]
@@ -334,14 +335,14 @@ class UserInformationView(views.APIView):
         return BaseListResponse.create(http_status=success, data=UserSerializer(user).data)
 
 
-class ContactsView(views.APIView, LimitOffsetPagination):
+class ContactsView(views.APIView, PageBasedPagination):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         tags=["Contacts"],
         parameters=[
-            OpenApiParameter(name="limit", type=int, description="Number of contacts to return"),
-            OpenApiParameter(name="offset", type=int, description="Number of contacts to ignored")
+            OpenApiParameter(name="page", type=int, description="Number of contacts to return"),
+            OpenApiParameter(name="page-size", type=int, description="Number of contacts to ignored")
         ])
     def get(self, request):
         if self.get_limit(request) <= 0:

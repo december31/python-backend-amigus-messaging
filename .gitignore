@@ -51,3 +51,5 @@ manage.py
 # example database
 drf_example
 /env/production.env
+/env/staged.env
+/env/firebase/firebase-admin-staged.json
