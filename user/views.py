@@ -3,14 +3,9 @@ import random
 import time
 
 from django.core.mail import send_mail
-from django.db.models import Subquery
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from kombu.pools import get_limit
-from rest_framework import views, serializers, viewsets
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework import views
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.viewsets import ModelViewSet
 
 from base.response import (
     BaseResponse,

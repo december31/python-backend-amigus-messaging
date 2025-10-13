@@ -17,7 +17,7 @@ class TokenSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "email", "phone", "avatar")
+        fields = ("id", "email", "phone", "avatar", "display_name")
 
 
 class OTPRequestSerializer(serializers.Serializer):

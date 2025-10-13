@@ -11,6 +11,7 @@ from base.response import BaseResponse, success, BaseListResponse
 from message.models import Message, Conversation, ConversationParticipant, ConversationRole
 from message.serializers import SendPrivateMessageSerializer, MessageSerializer, SendGroupMessageSerializer
 from user.models import User
+from utils.pagination import PageBasedPagination
 
 logger = logging.getLogger(__name__)
 
@@ -84,14 +85,14 @@ class SendGroupMessageView(views.APIView):
         pass
 
 
-class RecentMessagesView(views.APIView, LimitOffsetPagination):
+class RecentMessagesView(views.APIView, PageBasedPagination):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         tags=["Message"],
         parameters=[
-            OpenApiParameter(name="limit", type=int),
-            OpenApiParameter(name="offset", type=int)
+            OpenApiParameter(name="page", type=int),
+            OpenApiParameter(name="page-size", type=int)
         ])
     def get(self, request):
         if self.get_limit(request) <= 0:

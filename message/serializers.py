@@ -34,7 +34,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Conversation
-        exclude = ("created_at", "updated_at")
+        exclude = ("created_at", "updated_at")  
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -43,4 +43,4 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        exclude = ("created_at", "updated_at")
+        exclude = ("updated_at",)
