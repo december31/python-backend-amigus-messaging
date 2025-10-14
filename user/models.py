@@ -48,6 +48,12 @@ class User(AbstractUser):
 
     objects = CustomUserManager()
 
+    class Meta:
+        indexes=[
+            models.Index(
+                fields=["email", "phone"]
+            )
+        ]
 
 class Token(BaseModel):
     access_token = models.CharField(max_length=255)
@@ -55,3 +61,10 @@ class Token(BaseModel):
     is_one_time_token = models.BooleanField(default=False)
     revoked = models.BooleanField(default=False)
     owner = ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        indexes=[
+            models.Index(
+                fields=["owner"]
+            )
+        ]

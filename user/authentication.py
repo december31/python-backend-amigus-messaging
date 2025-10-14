@@ -31,7 +31,7 @@ class Authentication(JWTAuthentication):
     def get_validated_token(self, raw_token: bytes) -> Token:
         token = super().get_validated_token(raw_token)
 
-        saved_token = models.Token.objects.get(access_token=raw_token.decode("utf-8"))
+        saved_token = models.Token.objects.filter(access_token=raw_token.decode("utf-8")).first()
 
         if saved_token is None:
             raise BaseApiException.create(invalid_token)

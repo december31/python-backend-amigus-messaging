@@ -7,11 +7,13 @@ from rest_framework import views
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 
-from base.response import BaseResponse, success, BaseListResponse
+from base.response import BaseResponse, success, BaseListResponse, conversation_not_found
 from message.models import Message, Conversation, ConversationParticipant, ConversationRole
-from message.serializers import SendPrivateMessageSerializer, MessageSerializer, SendGroupMessageSerializer
+from message.serializers import ConversationSerializer, RecentConversationSerializer, SendPrivateMessageSerializer, MessageSerializer, SendGroupMessageSerializer
 from user.models import User
+from utils.model_utils import get_object_or_exception, get_object_or_none
 from utils.pagination import PageBasedPagination
+
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +87,11 @@ class SendGroupMessageView(views.APIView):
         pass
 
 
+class PrivateMessageView(views.APIView):
+    def get(self, request):
+        pass
+
+
 class RecentMessagesView(views.APIView, PageBasedPagination):
     permission_classes = [IsAuthenticated]
 
@@ -100,24 +107,26 @@ class RecentMessagesView(views.APIView, PageBasedPagination):
         if self.get_offset(request) < 0:
             return BaseListResponse.create(success, data=[])
 
-        latest_message_subquery = Message.objects.filter(
-            conversation=OuterRef("conversation")
-        ).order_by("-created_at", "-id")
+        # latest_message_subquery = Message.objects.filter(
+        #     conversation=OuterRef("conversation")
+        # ).order_by("-created_at", "-id")
 
-        unread_message_subquery = Message.objects.filter(
-            conversation=OuterRef("conversation")
-        ).values("conversation").annotate(unread=Count(
-            "id",
-            filter=Q(status=Message.StatusChoice.SENT.value) & ~Q(sender__id=request.user.id)
-        )).values("unread")[:1]
+        # unread_message_subquery = Message.objects.filter(
+        #     conversation=OuterRef("conversation")
+        # ).values("conversation").annotate(unread=Count(
+        #     "id",
+        #     filter=Q(status=Message.StatusChoice.SENT.value) & ~Q(sender__id=request.user.id)
+        # )).values("unread")[:1]
 
 
-        latest_message = Message.objects.filter(
-            id=Subquery(latest_message_subquery[:1].values("id")),
-            conversation__participants__user__id=request.user.id
-        ).order_by("-created_at").annotate(unread=Subquery(unread_message_subquery))
+        # latest_message = Message.objects.filter(
+        #     id=Subquery(latest_message_subquery[:1].values("id")),
+        #     conversation__participants__user__id=request.user.id
+        # ).order_by("-created_at").annotate(unread=Subquery(unread_message_subquery))
 
-        print(latest_message.values())
-        result = self.paginate_queryset(latest_message, request, view=self)
+        # print(latest_message.values())
+        # result = self.paginate_queryset(latest_message, request, view=self)
 
-        return BaseListResponse.create(success, data=MessageSerializer(result, many=True).data)
+        conversation = Conversation.objects.filter(participants__user=request.user)
+
+        return BaseListResponse.create(success, data=RecentConversationSerializer(conversation, many=True).data)

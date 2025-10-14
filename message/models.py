@@ -11,6 +11,10 @@ class Conversation(BaseModel):
 
     type = models.CharField(choices=TypeChoice.choices)
     name = models.CharField(null=True)
+    newest_message_time = models.DateTimeField(null=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["type"])]
 
 
 class ConversationRole(BaseModel):
@@ -42,6 +46,9 @@ class ConversationParticipant(BaseModel):
     role = models.ForeignKey(ConversationRole, on_delete=models.SET_NULL, null=True)
     accepted = models.BooleanField(default=False)
 
+    class Meta:
+        indexes = [models.Index(fields=["user", "conversation"])]
+
 
 class Message(BaseModel):
     class StatusChoice(models.TextChoices):
@@ -58,7 +65,12 @@ class Message(BaseModel):
     )
     sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     content = models.TextField()
-    status = models.CharField(max_length=20, choices=StatusChoice.choices, default=StatusChoice.SENT.value)
+    status = models.CharField(
+        max_length=20, choices=StatusChoice.choices, default=StatusChoice.SENT.value
+    )
+
+    class Meta:
+        indexes = [models.Index(fields=["conversation", "sender"])]
 
     @property
     def attachments(self):
@@ -67,7 +79,10 @@ class Message(BaseModel):
 
 class Attachment(BaseModel):
     class MimeTypeChoice(models.TextChoices):
-        IMAGE = "image/*", "Image",
+        IMAGE = (
+            "image/*",
+            "Image",
+        )
         AUDIO = "audio/*", "Audio"
         FILE = "application/*", "File"
 

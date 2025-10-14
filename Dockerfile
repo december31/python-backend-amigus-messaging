@@ -51,11 +51,11 @@ COPY . /app
 # If you're building the image for production, you might set permissions on /app for the non-root user.
 # For bind mounts, it's about giving the container user access to host files.
 # Chmod is also good to ensure execution rights on scripts etc.
-RUN chown -R appuser: /app
+RUN chown -R appuser:appuser /app
 RUN chmod -R ug+rwX /app # Give user and group read/write/execute permissions
 
 # Switch to the non-privileged user to run the application.
-USER appuser
+# USER appuser
 
 
 # Expose the port that the application listens on.

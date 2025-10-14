@@ -1,6 +1,11 @@
 from rest_framework import serializers
 
-from message.models import Message, Conversation, ConversationParticipant, ConversationRole
+from message.models import (
+    Message,
+    Conversation,
+    ConversationParticipant,
+    ConversationRole,
+)
 from user.serializers import UserSerializer
 
 
@@ -34,7 +39,26 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Conversation
-        exclude = ("created_at", "updated_at")  
+        exclude = ("created_at", "updated_at")
+
+
+class SimpleMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        exclude = ("updated_at", "conversation")
+
+
+class RecentConversationSerializer(serializers.ModelSerializer):
+    participants = ConversationParticipantsSerializer(many=True)
+    message = serializers.SerializerMethodField()
+
+    def get_message(self, obj):
+        message = obj.messages.filter(created_at=obj.newest_message_time).first()
+        return SimpleMessageSerializer(message).data
+
+    class Meta:
+        model = Conversation
+        exclude = ("created_at", "updated_at")
 
 
 class MessageSerializer(serializers.ModelSerializer):
