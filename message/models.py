@@ -15,6 +15,7 @@ class Conversation(BaseModel):
 
     class Meta:
         indexes = [models.Index(fields=["type"])]
+        ordering = ["newest_message_time"]
 
 
 class ConversationRole(BaseModel):
@@ -69,12 +70,13 @@ class Message(BaseModel):
         max_length=20, choices=StatusChoice.choices, default=StatusChoice.SENT.value
     )
 
-    class Meta:
-        indexes = [models.Index(fields=["conversation", "sender"])]
-
     @property
     def attachments(self):
         return Attachment.objects.filter(message=self)
+
+    class Meta:
+        indexes = [models.Index(fields=["conversation", "sender"])]
+        ordering = ["-created_at"]
 
 
 class Attachment(BaseModel):

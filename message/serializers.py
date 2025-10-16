@@ -43,6 +43,8 @@ class ConversationSerializer(serializers.ModelSerializer):
 
 
 class SimpleMessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer()
+
     class Meta:
         model = Message
         exclude = ("updated_at", "conversation")

@@ -6,5 +6,6 @@ from message.models import Conversation, Message
 
 @receiver(post_save, sender=Message)
 def on_message_saved(sender, instance, created, **kwargs):
-    instance.conversation.newest_message_time = instance.created_at
-    instance.conversation.save()
+    if created:
+        instance.conversation.newest_message_time = instance.created_at
+        instance.conversation.save()
